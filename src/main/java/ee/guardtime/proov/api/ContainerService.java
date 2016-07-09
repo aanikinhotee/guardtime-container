@@ -22,7 +22,9 @@ import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -35,6 +37,8 @@ public class ContainerService {
 
 
   private List<ManifestStructure> manifestStructures = new ArrayList<>();
+  private Map<String, List<String>> signedFiles = new HashMap<>();
+  private Map<String, String> signedManifests = new HashMap<>();
   private ZipOutputStream zipFile;
   private int counter;
   private HttpClientSettings httpClientSettings;
@@ -70,6 +74,17 @@ public class ContainerService {
         ZipService zipService = new ZipService();
         FileReference fileReference = zipService.unzipOneEntry(zis, entry);
         ManifestStructure manifestStructure = new ManifestStructure(TLVElement.create(fileReference.getContent()));
+
+        List<DatafileStructure> datafiles = manifestStructure.getDatafiles();
+        List<String> datafileUris = new ArrayList<>();
+
+        for(DatafileStructure datafileStructure: datafiles){
+          datafileUris.add(datafileStructure.getUri());
+        }
+
+        signedManifests.put(manifestStructure.getSignatureUri(), entry.getName());
+        signedFiles.put(manifestStructure.getSignatureUri(), datafileUris);
+
         manifestStructures.add(manifestStructure);
         zos.putNextEntry(new ZipEntry(entry.getName()));
         IOUtils.copy(new ByteArrayInputStream(fileReference.getContent()), zos);
@@ -190,6 +205,10 @@ public class ContainerService {
     manifestStructure = tlvService.addDatafile(fileHashingAlgorithm, manifestStructure, is, filename);
 
     signAndAddManifest(signatureUri, manifestStructure);
+  }
+
+  public void removeSignature(String signatureUri) {
+    throw new ContainerServiceException("not implemented yet");
   }
 
 
