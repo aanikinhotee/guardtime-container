@@ -12,7 +12,7 @@ Container is based on ZIP format and contains files with following structure:
 
 ### Initialization
 
-API represented in **ConteinerService** class. First of all you need to initialize container
+API represented in **ConteinerServiceAPI** interface. Current implementation is in class **ZipContainerServiceImpl**.First of all you need to initialize container
 with method
 ````
 initialize(HttpClientSettings httpClientSettings, File outputFile)
