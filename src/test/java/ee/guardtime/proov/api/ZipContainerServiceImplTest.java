@@ -24,7 +24,7 @@ import static org.junit.Assert.assertEquals;
  * Package: ee.guardtime.proov
  * User: anton
  */
-public class ContainerServiceTest extends GuardtimeTests {
+public class ZipContainerServiceImplTest extends GuardtimeTests {
 
   HttpClientSettings httpClientSettings;
 
@@ -58,10 +58,10 @@ public class ContainerServiceTest extends GuardtimeTests {
   public void testLargeFile2() throws IOException, KSIException {
     final File file = new File("/home/anton/Downloads/ISO/tomtom.iso");
     FileInputStream fis = new FileInputStream(file);
-    ContainerService containerService = new ContainerService();
-    containerService.initialize(httpClientSettings, new File("/tmp/zzzz.zip"));
-    containerService.addFileAndSign(HashAlgorithm.SHA2_256, fis, file.getName());
-    containerService.finish();
+    ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
+    zipContainerServiceImpl.initialize(httpClientSettings, new File("/tmp/zzzz.zip"));
+    zipContainerServiceImpl.addFileAndSign(HashAlgorithm.SHA2_256, fis, file.getName());
+    zipContainerServiceImpl.finish();
   }
 
 
@@ -85,14 +85,14 @@ public class ContainerServiceTest extends GuardtimeTests {
       FileInputStream fis2 = new FileInputStream(file2);
 
 
-      ContainerService containerService = new ContainerService();
+      ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
       final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-      containerService.initialize(httpClientSettings, outputStream);
+      zipContainerServiceImpl.initialize(httpClientSettings, outputStream);
 
-      containerService.addFileAndSign(HashAlgorithm.SHA2_256, fis, file.getName());
-      containerService.addFileAndSign(HashAlgorithm.SHA2_256, fis2, file2.getName());
+      zipContainerServiceImpl.addFileAndSign(HashAlgorithm.SHA2_256, fis, file.getName());
+      zipContainerServiceImpl.addFileAndSign(HashAlgorithm.SHA2_256, fis2, file2.getName());
 
-      containerService.finish();
+      zipContainerServiceImpl.finish();
 
       //writeToTempFile(outputStream.toByteArray(), "4");
 
@@ -117,10 +117,10 @@ public class ContainerServiceTest extends GuardtimeTests {
         files.add(file);
       }
 
-      ContainerService containerService = new ContainerService();
-      containerService.initialize(httpClientSettings, outputStream);
-      containerService.addFilesAndSign(HashAlgorithm.SHA2_256, files);
-      containerService.finish();
+      ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
+      zipContainerServiceImpl.initialize(httpClientSettings, outputStream);
+      zipContainerServiceImpl.addFilesAndSign(HashAlgorithm.SHA2_256, files);
+      zipContainerServiceImpl.finish();
 
       //writeToTempFile(outputStream.toByteArray(), "2");
     } finally {
@@ -135,17 +135,17 @@ public class ContainerServiceTest extends GuardtimeTests {
 
   @Test
   public void testLotsOfFiles1() throws IOException, KSIException {
-    ContainerService containerService = new ContainerService();
+    ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    containerService.initialize(httpClientSettings, outputStream);
+    zipContainerServiceImpl.initialize(httpClientSettings, outputStream);
     for(int i = 0; i < 10; i ++) {
       final File file = getTempFileSmall();
       FileInputStream fis = new FileInputStream(file);
 
-      containerService.addFileAndSign(HashAlgorithm.SHA2_256, fis, file.getName());
+      zipContainerServiceImpl.addFileAndSign(HashAlgorithm.SHA2_256, fis, file.getName());
     }
 
-    containerService.finish();
+    zipContainerServiceImpl.finish();
 
     //writeToTempFile(outputStream.toByteArray(), "1");
   }
@@ -153,18 +153,18 @@ public class ContainerServiceTest extends GuardtimeTests {
   @Test
   public void testAddFilesAndSign() throws IOException, KSIException {
 
-    ContainerService containerService = new ContainerService();
+    ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
 
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    containerService.initialize(httpClientSettings, outputStream);
+    zipContainerServiceImpl.initialize(httpClientSettings, outputStream);
 
     List<File> fileList = new ArrayList<>();
     fileList.add(getTempFileSmall());
     fileList.add(getTempFileSmall());
 
-    containerService.addFilesAndSign(HashAlgorithm.SHA2_256, fileList);
+    zipContainerServiceImpl.addFilesAndSign(HashAlgorithm.SHA2_256, fileList);
 
-    containerService.finish();
+    zipContainerServiceImpl.finish();
 
     final byte[] zipFileBytes = outputStream.toByteArray();
 
@@ -178,43 +178,43 @@ public class ContainerServiceTest extends GuardtimeTests {
 
   @Test(expected = ContainerServiceException.class)
   public void testInit(){
-    ContainerService containerService = new ContainerService();
-    containerService.initialize(httpClientSettings, new ByteArrayOutputStream());
-    containerService.initialize(httpClientSettings, new ByteArrayOutputStream());
+    ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
+    zipContainerServiceImpl.initialize(httpClientSettings, new ByteArrayOutputStream());
+    zipContainerServiceImpl.initialize(httpClientSettings, new ByteArrayOutputStream());
   }
 
 
   @Test(expected = ContainerServiceException.class)
   public void testFinish() throws IOException {
-    ContainerService containerService = new ContainerService();
-    containerService.finish();
+    ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
+    zipContainerServiceImpl.finish();
   }
 
   @Test(expected = ContainerServiceException.class)
   public void testAddFileException() throws Exception {
-    ContainerService containerService = new ContainerService();
+    ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
     final FileReference fileReference = getFileReference("test.a");
     ByteArrayInputStream inputStream = new ByteArrayInputStream(fileReference.getContent());
-    containerService.addFileAndSign(HashAlgorithm.SHA2_256, inputStream, fileReference.getFilename());
+    zipContainerServiceImpl.addFileAndSign(HashAlgorithm.SHA2_256, inputStream, fileReference.getFilename());
   }
 
   @Test
   public void testAddFile() throws Exception {
-    ContainerService containerService = new ContainerService();
+    ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
 
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    containerService.initialize(httpClientSettings, outputStream);
+    zipContainerServiceImpl.initialize(httpClientSettings, outputStream);
     final String filename = "test.a";
     final FileReference fileReference = getFileReference(filename);
     ByteArrayInputStream inputStream = new ByteArrayInputStream(fileReference.getContent());
-    containerService.addFileAndSign(HashAlgorithm.SHA2_256, inputStream, fileReference.getFilename());
+    zipContainerServiceImpl.addFileAndSign(HashAlgorithm.SHA2_256, inputStream, fileReference.getFilename());
 
 
     final FileReference fileReference1 = getFileReference("test.b");
     ByteArrayInputStream inputStream1 = new ByteArrayInputStream(fileReference1.getContent());
-    containerService.addFileAndSign(HashAlgorithm.SHA2_256, inputStream1, fileReference1.getFilename());
+    zipContainerServiceImpl.addFileAndSign(HashAlgorithm.SHA2_256, inputStream1, fileReference1.getFilename());
 
-    containerService.finish();
+    zipContainerServiceImpl.finish();
 
     final byte[] zipFileBytes = outputStream.toByteArray();
 

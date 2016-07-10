@@ -26,7 +26,7 @@ import static org.junit.Assert.assertEquals;
  * Date: 7/10/16
  * Time: 12:15 AM
  */
-public class ContainerServiceTest2 extends GuardtimeTests {
+public class ZipContainerServiceImplTest2 extends GuardtimeTests {
 
   HttpClientSettings httpClientSettings;
 
@@ -49,7 +49,7 @@ public class ContainerServiceTest2 extends GuardtimeTests {
 
   @Test
   public void testRemoveSignature() throws IOException, TLVParserException, UnknownHashAlgorithmException {
-    ContainerService containerService = new ContainerService();
+    ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
     InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("0zip.zip");
 
     final File oldzip = File.createTempFile("oldzip_", ".zip");
@@ -57,12 +57,12 @@ public class ContainerServiceTest2 extends GuardtimeTests {
 
     System.out.println("Old filename = " + oldzip.getName());
 
-    containerService.initializeFromExisting(httpClientSettings, oldzip);
+    zipContainerServiceImpl.initializeFromExisting(httpClientSettings, oldzip);
 
     final String signatureUriToRemove = "/META-INF/signature1.ksi";
-    containerService.removeSignature(signatureUriToRemove);
+    zipContainerServiceImpl.removeSignature(signatureUriToRemove);
 
-    containerService.finish();
+    zipContainerServiceImpl.finish();
 
 
     ZipService zipService = new ZipService();
@@ -81,15 +81,15 @@ public class ContainerServiceTest2 extends GuardtimeTests {
 
     System.out.println("Old filename = " + oldzip.getName());
 
-    ContainerService containerService = new ContainerService();
+    ContainerServiceAPI zipContainerServiceImpl = new ZipContainerServiceImpl();
 
-    containerService.initializeFromExisting(httpClientSettings, oldzip);
+    zipContainerServiceImpl.initializeFromExisting(httpClientSettings, oldzip);
 
     final String filename = "test.c";
     final FileReference fileReference = getFileReference(filename);
     ByteArrayInputStream cFileInputStream = new ByteArrayInputStream(fileReference.getContent());
-    containerService.addFileAndSign(HashAlgorithm.SHA2_256, cFileInputStream, filename);
-    containerService.finish();
+    zipContainerServiceImpl.addFileAndSign(HashAlgorithm.SHA2_256, cFileInputStream, filename);
+    zipContainerServiceImpl.finish();
 
 
     ZipService zipService = new ZipService();
