@@ -86,6 +86,8 @@ removeSignature(String signatureUri)
 
 and at the end you need to finalize process.
 
+**Please note that removing signature mean also removing manifest file and datafile from container**
+
 Common examples
 --------------
 
