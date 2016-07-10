@@ -25,11 +25,11 @@ Second parameter _outputFile_ is a File where container will be stored after cre
 
 To add new data file and sign it, you should use method
 ````
-addFileAndSign(HashAlgorithm fileHashingAlgorithm, InputStream is, String filename)
+addFileAndSign(HashAlgorithm fileHashingAlgorithm, InputStream inputStream, String filename)
 ````
 
 First parameter _fileHashingAlgorithm_ define which hashing algorithm should be used.
-Second parameter _is_ is an input stream of new file. And one more parameter _filename_ define what filename should be
+Second parameter _inputStream_ is an input stream of new file. And one more parameter _filename_ define what filename should be
 assigned to data file in container.
 
 ### Adding multiple files
@@ -52,39 +52,44 @@ It will flush and close ZIP container's output stream.
 
 To open and modify existing container you should initialize service with method
 ````
-initializeFromExisting(HttpClientSettings httpClientSettings, File inputFile, File outputFile)
+initializeFromExisting(HttpClientSettings httpClientSettings, File inputFile)
 ````
 
 * httpClientSettings - parameter for Guardtime service parameters and credentials
 * inputFile - existing container file
-* outputFile - file for a new version of container
 
 While standard ZIP format API does not allow make modifications in existing ZIP files, we should write down another
-copy of container. After all modifications old version can be replaced with new version of file. It can be done outside
-the service.
+temporary copy of container. After all modifications old version will be replaced with new version of file.
 
 After initialization adding new data files and signatures can be done in normal way with methods
 ````
-addFileAndSign(HashAlgorithm fileHashingAlgorithm, InputStream is, String filename)
+addFileAndSign(HashAlgorithm fileHashingAlgorithm, InputStream inputStream, String filename)
 ````
 or
 ````
 addFilesAndSign(HashAlgorithm fileHashingAlgorithm, List<File> files)
 ````
-and at the end of process finalized.
+and at the end you need to finalize process.
 
 
 ### Open existing container and remove signature
 
-To remove signature you need initialized service, then you can execute method
+To remove signature you need initialized service with method:
+````
+initializeFromExisting(HttpClientSettings httpClientSettings, File inputFile)
+````
+
+After that you can execute method
 ````
 removeSignature(String signatureUri)
 ````
 
+and at the end you need to finalize process.
 
-### Example
+Common examples
+--------------
 
-Simplest example for creating container, adding and signing datafile is like this:
+Simplest example for creating container, adding and signing datafile
 
 ```java
      File file = new File("/tmp/datafile1.txt");
@@ -94,6 +99,30 @@ Simplest example for creating container, adding and signing datafile is like thi
      containerService.addFileAndSign(HashAlgorithm.SHA2_256, fis, file.getName());
      containerService.finish();
 ```
+
+For adding new signature to existing container
+
+````java
+    ContainerService containerService = new ContainerService();
+    containerService.initializeFromExisting(httpClientSettings, existingContainer);
+
+    File file = new File("/tmp/datafile2.txt");
+    FileInputStream fis = new FileInputStream(file);
+    containerService.addFileAndSign(HashAlgorithm.SHA2_256, fis, file.getName());
+    containerService.finish();
+````
+
+Removing signature from existing container
+
+````java
+
+    ContainerService containerService = new ContainerService();
+    containerService.initializeFromExisting(httpClientSettings, oldzip);
+
+    final String signatureUriToRemove = "/META-INF/signature1.ksi";
+    containerService.removeSignature(signatureUriToRemove);
+    containerService.finish();
+````
 
 To execute unit test use following maven command:
 -------------------------------------------------

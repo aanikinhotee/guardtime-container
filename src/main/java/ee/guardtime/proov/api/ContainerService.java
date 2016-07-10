@@ -18,9 +18,9 @@ import ee.guardtime.proov.tlv.ManifestStructure;
 import ee.guardtime.proov.tlv.TLVService;
 import ee.guardtime.proov.zip.FileReference;
 import ee.guardtime.proov.zip.ZipService;
-import org.apache.commons.io.IOUtils;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,32 +39,56 @@ public class ContainerService {
   private List<ManifestStructure> manifestStructures = new ArrayList<>();
   private Map<String, List<String>> signedFiles = new HashMap<>();
   private Map<String, String> signedManifests = new HashMap<>();
-  private ZipOutputStream zipFile;
+  private List<String> signatureUris = new ArrayList<>();
+  private ZipOutputStream newZipOutputStream;
   private int counter;
   private HttpClientSettings httpClientSettings;
+  private File originalZipFile = null;
+  private File tempZipFile = null;
 
+
+  private List<String> zipEntryNames = new ArrayList<>();
 
   /**
-   * initialize container and open streams for adding new files
+   *
+   * @return collection of signatures in container
+   */
+  public List<String> getSignatureUris() {
+    return signatureUris;
+  }
+
+  /**
+   *
+   * @return collection of signed files in container
+   */
+  public Map<String, List<String>> getSignedFiles() {
+    return signedFiles;
+  }
+
+  /**
+   *
+   * @return collection of signed manifests
+   */
+  public Map<String, String> getSignedManifests() {
+    return signedManifests;
+  }
+
+  /**
+   * Initialize container and open streams for adding new files
    * suitable for large files if use FileOutputStream or something like that
    * using old container to add new signatures
    *
    */
-  public void initializeFromExisting(HttpClientSettings httpClientSettings, File inputFile,
-                                     File outputFile) throws IOException, TLVParserException, UnknownHashAlgorithmException {
-    initializeFromExisting(httpClientSettings, new FileInputStream(inputFile), new FileOutputStream(outputFile));
-  }
-
-
-  private void initializeFromExisting(HttpClientSettings httpClientSettings, InputStream inputStream,
-                                      OutputStream outputStream) throws IOException,
-    TLVParserException, UnknownHashAlgorithmException {
-    if(this.zipFile != null){
+  public void initializeFromExisting(HttpClientSettings httpClientSettings, File inputFile) throws IOException, TLVParserException, UnknownHashAlgorithmException {
+    if(this.newZipOutputStream != null){
       throw  new ContainerServiceException("Already initialized");
     }
 
-    ZipInputStream zis = new ZipInputStream(inputStream);
-    ZipOutputStream zos = new ZipOutputStream(outputStream);
+    this.tempZipFile = File.createTempFile("zip_", ".zip");
+    this.originalZipFile = inputFile;
+
+    ZipInputStream zis = new ZipInputStream(new FileInputStream(originalZipFile));
+    ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(tempZipFile));
 
     ZipEntry entry;
     while((entry = zis.getNextEntry()) != null){
@@ -75,35 +99,27 @@ public class ContainerService {
         FileReference fileReference = zipService.unzipOneEntry(zis, entry);
         ManifestStructure manifestStructure = new ManifestStructure(TLVElement.create(fileReference.getContent()));
 
-        List<DatafileStructure> datafiles = manifestStructure.getDatafiles();
-        List<String> datafileUris = new ArrayList<>();
-
-        for(DatafileStructure datafileStructure: datafiles){
-          datafileUris.add(datafileStructure.getUri());
-        }
+        List<String> datafileUris = getSignedFilesList(manifestStructure);
 
         signedManifests.put(manifestStructure.getSignatureUri(), entry.getName());
         signedFiles.put(manifestStructure.getSignatureUri(), datafileUris);
+        signatureUris.add(manifestStructure.getSignatureUri());
 
         manifestStructures.add(manifestStructure);
-        zos.putNextEntry(new ZipEntry(entry.getName()));
-        IOUtils.copy(new ByteArrayInputStream(fileReference.getContent()), zos);
-
-      } else {
-        zos.putNextEntry(new ZipEntry(entry.getName()));
-        IOUtils.copy(zis, zos);
       }
 
-      zos.closeEntry();
+      zipEntryNames.add(entry.getName());
     }
 
+    zis.close();
     this.counter = manifestStructures.size() + 1;
-    this.zipFile = zos;
+    this.newZipOutputStream = zos;
     this.httpClientSettings = httpClientSettings;
   }
 
   /**
-   * output goes to file
+   * Initialize container and open streams for adding new files
+   * output goes directly to file in filesystem
    *
    */
   public void initialize(HttpClientSettings httpClientSettings, File outputFile) throws FileNotFoundException {
@@ -111,41 +127,52 @@ public class ContainerService {
   }
 
   /**
-   * initialize container and open streams for adding new files
+   * Initialize container and open streams for adding new files
    * suitable for large files if use FileOutputStream or something like that
    */
   void initialize(HttpClientSettings httpClientSettings, OutputStream outputStream) {
-    if(this.zipFile != null){
+    if(this.newZipOutputStream != null){
       throw  new ContainerServiceException("Already initialized");
     }
     this.counter = 1;
-    this.zipFile = new ZipOutputStream(outputStream);
+    this.newZipOutputStream = new ZipOutputStream(outputStream);
     this.httpClientSettings = httpClientSettings;
   }
 
   /**
-   * finish writing and close streams
+   * Finish writing process and close streams
    *
    * @throws IOException
    */
   public void finish() throws IOException {
-    if(zipFile == null) {
+    if(newZipOutputStream == null) {
       throw new ContainerServiceException("Container service not initialized");
     }
 
-    zipFile.close();
+    if(originalZipFile != null) {
+      ZipInputStream originalInputStream = new ZipInputStream(new FileInputStream(originalZipFile));
+      ZipService zipService = new ZipService();
+      zipService.copyEntryFromZip2Zip(originalInputStream, newZipOutputStream, zipEntryNames);
+    }
+    newZipOutputStream.close();
+
+    if(originalZipFile != null) {
+      Path source = tempZipFile.toPath();
+      Path target = originalZipFile.toPath();
+      Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+    }
   }
 
 
   /**
-   * add and sign list of files
+   * Add and sign list of files
    *
    * @param files list of files
    * @throws KSIException
    * @throws IOException
    */
   public void addFilesAndSign(HashAlgorithm fileHashingAlgorithm, List<File> files) throws KSIException, IOException {
-    if(zipFile == null) {
+    if(newZipOutputStream == null) {
       throw new ContainerServiceException("Container service not initialized");
     }
 
@@ -174,7 +201,8 @@ public class ContainerService {
 
 
       try (FileInputStream is = new FileInputStream(file)) {
-        zipService.addFileToZip(zipFile, is, file.getName());
+        ZipEntry entry = zipService.addFileToZip(newZipOutputStream, is, file.getName());
+        zipEntryNames.add(entry.getName());
       }
     }
 
@@ -183,32 +211,47 @@ public class ContainerService {
   }
 
   /**
-   * add new file for signing
+   * Add new file for signing
    *
-   * @param is new file input stream
+   * @param inputStream new file input stream
    * @param filename new filename
    * @throws IOException
    * @throws KSIException
    */
-  public void addFileAndSign(HashAlgorithm fileHashingAlgorithm, InputStream is, String filename) throws IOException, KSIException {
-    if(zipFile == null) {
+  public void addFileAndSign(HashAlgorithm fileHashingAlgorithm, InputStream inputStream, String filename) throws IOException, KSIException {
+    if(newZipOutputStream == null) {
       throw new ContainerServiceException("Container service not initialized");
     }
 
     ZipService zipService = new ZipService();
 
-    zipService.addFileToZip(zipFile, is, filename);
+    ZipEntry entry = zipService.addFileToZip(newZipOutputStream, inputStream, filename);
+    zipEntryNames.add(entry.getName());
 
     TLVService tlvService = new TLVService();
     final String signatureUri = "/META-INF/signature" + counter + ".ksi";
     ManifestStructure manifestStructure = tlvService.createEmptyManifest(signatureUri);
-    manifestStructure = tlvService.addDatafile(fileHashingAlgorithm, manifestStructure, is, filename);
+    manifestStructure = tlvService.addDatafile(fileHashingAlgorithm, manifestStructure, inputStream, filename);
 
     signAndAddManifest(signatureUri, manifestStructure);
   }
 
+  /**
+   * Removes signature from container
+   *
+   * @param signatureUri URI of signature file in container
+   */
   public void removeSignature(String signatureUri) {
-    throw new ContainerServiceException("not implemented yet");
+    List<String> datafileUris = getSignedFiles().get(signatureUri);
+    String manifestUri = getSignedManifests().get(signatureUri);
+
+    zipEntryNames.remove(signatureUri);
+
+    for(String datafileUri : datafileUris){
+      zipEntryNames.remove(datafileUri);
+    }
+
+    zipEntryNames.remove(manifestUri);
   }
 
 
@@ -221,7 +264,9 @@ public class ContainerService {
 
     final byte[] manifestBytes = manifestBaos.toByteArray();
 
-    zipService.addFileToZip(zipFile, new ByteArrayInputStream(manifestBytes), "/META-INF/manifest" + counter + ".tlv");
+    final String manifestUri = "/META-INF/manifest" + counter + ".tlv";
+    ZipEntry entry = zipService.addFileToZip(newZipOutputStream, new ByteArrayInputStream(manifestBytes), manifestUri);
+    zipEntryNames.add(entry.getName());
 
 
     InputStream isFromManifest = new ByteArrayInputStream(manifestBytes);
@@ -229,10 +274,30 @@ public class ContainerService {
 
     byte[] signature = signFile(manifestDataHash);
 
-    zipService.addFileToZip(zipFile, new ByteArrayInputStream(signature), signatureUri);
+    ZipEntry entry1 = zipService.addFileToZip(newZipOutputStream, new ByteArrayInputStream(signature), signatureUri);
+    zipEntryNames.add(entry1.getName());
+
+    List<String> datafileUris = getSignedFilesList(manifestStructure);
+
     manifestStructures.add(manifestStructure);
+    signedFiles.put(signatureUri, datafileUris);
+    signedManifests.put(signatureUri, manifestUri);
+    signatureUris.add(signatureUri);
+
     counter++;
   }
+
+
+  private List<String> getSignedFilesList(ManifestStructure manifestStructure) {
+    List<DatafileStructure> datafiles = manifestStructure.getDatafiles();
+    List<String> datafileUris = new ArrayList<>();
+
+    for(DatafileStructure datafileStructure: datafiles){
+      datafileUris.add(datafileStructure.getUri());
+    }
+    return datafileUris;
+  }
+
 
   private byte[] signFile(DataHash manifestDataHash) throws KSIException, IOException {
     KSI ksi = getKsi();

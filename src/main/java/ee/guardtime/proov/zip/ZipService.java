@@ -1,5 +1,7 @@
 package ee.guardtime.proov.zip;
 
+import org.apache.commons.io.IOUtils;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +18,24 @@ public class ZipService {
   private static final int DEFAULT_BUFFER_SIZE = 8192;
 
 
+  /**
+   * Method for coping entries from one to another
+   *
+   * @param destinationOutputStream ZIP file output stream , place where we write to
+   * @param originInputStream file inputStream read from
+   * @param entriesToCopy List of entry names from old ZIP archive we need to copy
+   * @throws IOException
+   */
+  public void copyEntryFromZip2Zip(ZipInputStream originInputStream, ZipOutputStream destinationOutputStream, List<String> entriesToCopy) throws IOException {
+    ZipEntry entry;
+    while((entry = originInputStream.getNextEntry()) != null) {
+      if(entriesToCopy.contains(entry.getName())){
+        destinationOutputStream.putNextEntry(new ZipEntry(entry));
+        IOUtils.copy(originInputStream, destinationOutputStream);
+        destinationOutputStream.closeEntry();
+      }
+    }
+  }
 
 
   /**
@@ -47,12 +67,13 @@ public class ZipService {
    * @param filename new filename
    * @throws IOException
    */
-  public void addFileToZip(ZipOutputStream zos, InputStream inputStream, String filename) throws IOException {
+  public ZipEntry addFileToZip(ZipOutputStream zos, InputStream inputStream, String filename) throws IOException {
     // create byte buffer
     byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
 
     // begin writing a new ZIP entry, positions the stream to the start of the entry data
-    zos.putNextEntry(new ZipEntry(filename));
+    final ZipEntry zipEntry = new ZipEntry(filename);
+    zos.putNextEntry(zipEntry);
 
     int length;
 
@@ -61,8 +82,19 @@ public class ZipService {
     }
 
     zos.closeEntry();
+    return zipEntry;
   }
 
+
+
+  /**
+   * Method for unziping one entry
+   *
+   * @param zis ZIP file input stream
+   * @param entry selected entry from ZIP file
+   * @return FileReference = file data + filename
+   * @throws IOException
+   */
   public FileReference unzipOneEntry(ZipInputStream zis, ZipEntry entry) throws IOException {
     byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
 
@@ -80,7 +112,6 @@ public class ZipService {
     }
     finally
     {
-      // we must always close the output file
       if(output!=null) output.close();
     }
   }

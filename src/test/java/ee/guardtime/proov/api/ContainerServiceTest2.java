@@ -1,19 +1,24 @@
 package ee.guardtime.proov.api;
 
+import com.guardtime.ksi.exceptions.KSIException;
+import com.guardtime.ksi.hashing.HashAlgorithm;
 import com.guardtime.ksi.hashing.UnknownHashAlgorithmException;
 import com.guardtime.ksi.service.client.KSIServiceCredentials;
 import com.guardtime.ksi.service.client.ServiceCredentials;
 import com.guardtime.ksi.service.client.http.HttpClientSettings;
 import com.guardtime.ksi.tlv.TLVParserException;
 import ee.guardtime.proov.GuardtimeTests;
+import ee.guardtime.proov.zip.FileReference;
+import ee.guardtime.proov.zip.ZipService;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Package: ee.guardtime.proov.api
@@ -50,17 +55,47 @@ public class ContainerServiceTest2 extends GuardtimeTests {
     final File oldzip = File.createTempFile("oldzip_", ".zip");
     Files.copy(inputStream, oldzip.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
+    System.out.println("Old filename = " + oldzip.getName());
 
-    final File newzip = File.createTempFile("zip_", ".zip");
-    containerService.initializeFromExisting(httpClientSettings, oldzip, newzip);
+    containerService.initializeFromExisting(httpClientSettings, oldzip);
 
-    containerService.removeSignature("META-INF/signature1.ksi");
+    final String signatureUriToRemove = "/META-INF/signature1.ksi";
+    containerService.removeSignature(signatureUriToRemove);
 
     containerService.finish();
 
-    if(newzip.renameTo(oldzip)) System.out.println("renamed");
+
+    ZipService zipService = new ZipService();
+    List<FileReference> fileReferences = zipService.unzipFileMultiple(new FileInputStream(oldzip));
+
+    assertEquals(3, fileReferences.size());
+  }
 
 
+  @Test
+  public void testAppendToZip() throws IOException, KSIException {
+    InputStream originalInputStream = this.getClass().getClassLoader().getResourceAsStream("0zip.zip");
+
+    final File oldzip = File.createTempFile("oldzip_", ".zip");
+    Files.copy(originalInputStream, oldzip.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+    System.out.println("Old filename = " + oldzip.getName());
+
+    ContainerService containerService = new ContainerService();
+
+    containerService.initializeFromExisting(httpClientSettings, oldzip);
+
+    final String filename = "test.c";
+    final FileReference fileReference = getFileReference(filename);
+    ByteArrayInputStream cFileInputStream = new ByteArrayInputStream(fileReference.getContent());
+    containerService.addFileAndSign(HashAlgorithm.SHA2_256, cFileInputStream, filename);
+    containerService.finish();
+
+
+    ZipService zipService = new ZipService();
+    List<FileReference> fileReferences = zipService.unzipFileMultiple(new FileInputStream(oldzip));
+
+    assertEquals(9, fileReferences.size());
   }
 }
 

@@ -14,8 +14,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -233,30 +231,6 @@ public class ContainerServiceTest extends GuardtimeTests {
     }
   }
 
-  @Test
-  public void testAppendToZip() throws IOException, KSIException {
 
-    InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("0zip.zip");
-
-    final File oldzip = File.createTempFile("oldzip_", ".zip");
-    Files.copy(inputStream, oldzip.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-    ContainerService containerService = new ContainerService();
-
-    final File newzip = File.createTempFile("zip_", ".zip");
-
-    containerService.initializeFromExisting(httpClientSettings, oldzip, newzip);
-
-    final String filename = "test.c";
-    final FileReference fileReference = getFileReference(filename);
-    ByteArrayInputStream is = new ByteArrayInputStream(fileReference.getContent());
-
-    containerService.addFileAndSign(HashAlgorithm.SHA2_256, is, filename);
-
-    containerService.finish();
-
-    if(newzip.renameTo(oldzip)) System.out.println("renamed");
-
-  }
 
 }
