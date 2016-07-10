@@ -9,8 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Package: ee.guardtime.proov
- * User: anton
+ * This is class for storing metadata about signature and related datafiles.
+ * For storing information used TLV format. In current implementation size of Manifest cannot be more
+ * than 64KB. It mean that you have to split datafiles between different manifests if this size exceeded.
+ *
  */
 public class ManifestStructure extends TLVStructure {
 

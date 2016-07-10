@@ -9,8 +9,9 @@ import com.guardtime.ksi.tlv.TLVParserException;
 import java.io.InputStream;
 
 /**
- * Package: ee.guardtime.proov.tlv
- * User: anton
+ * TLVService class is used for managing all operations with manifest files.
+ * Reading existing manifests and writing new ones.
+ *
  */
 public class TLVService {
 
@@ -31,7 +32,7 @@ public class TLVService {
 
 
   /**
-   * add new datafile into existinf manifest
+   * Add new datafile into existinf manifest
    *
    * @param manifestStructure manifest
    * @param is new file input stream
@@ -67,7 +68,7 @@ public class TLVService {
   }
 
   /**
-   * create empty manifest
+   * Create empty manifest
    *
    * @param signatureUri signature uri in zip file
    * @return empty manifest structure
@@ -88,7 +89,7 @@ public class TLVService {
 
 
   /**
-   * generate DatafileStructure object
+   * Generate DatafileStructure object
    *
    * @param fileHashingAlgorithm Hashing algorithm
    * @param is new file input stream

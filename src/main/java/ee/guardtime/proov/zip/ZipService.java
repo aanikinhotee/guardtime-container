@@ -10,8 +10,8 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Package: ee.guardtime.proov
- * User: anton
+ * ZipService class used for manipulations with ZIP files.
+ *
  */
 public class ZipService {
 

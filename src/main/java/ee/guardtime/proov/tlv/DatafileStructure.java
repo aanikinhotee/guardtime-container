@@ -10,8 +10,9 @@ import com.guardtime.ksi.tlv.TLVStructure;
 import java.util.List;
 
 /**
- * Package: ee.guardtime.proov
- * User: anton
+ * This class is for storing metadata about data files. We use TLV format here.
+ * Metadata contain following information: datafile URI, datafile Hash and Hashing algorithm
+ *
  */
 public class DatafileStructure extends TLVStructure {
 
