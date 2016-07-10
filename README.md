@@ -94,7 +94,7 @@ Simplest example for creating container, adding and signing datafile
 ```java
      File file = new File("/tmp/datafile1.txt");
      FileInputStream fis = new FileInputStream(file);
-     ContainerService containerService = new ContainerService();
+     ContainerService containerService = new ZipContainerServiceImpl();
      containerService.initialize(httpClientSettings, new File("/tmp/container.zip"));
      containerService.addFileAndSign(HashAlgorithm.SHA2_256, fis, file.getName());
      containerService.finish();
@@ -103,7 +103,7 @@ Simplest example for creating container, adding and signing datafile
 For adding new signature to existing container
 
 ````java
-    ContainerService containerService = new ContainerService();
+    ContainerService containerService = new ZipContainerServiceImpl();
     containerService.initializeFromExisting(httpClientSettings, existingContainer);
 
     File file = new File("/tmp/datafile2.txt");
@@ -116,7 +116,7 @@ Removing signature from existing container
 
 ````java
 
-    ContainerService containerService = new ContainerService();
+    ContainerService containerService = new ZipContainerServiceImpl();
     containerService.initializeFromExisting(httpClientSettings, oldzip);
 
     final String signatureUriToRemove = "/META-INF/signature1.ksi";
