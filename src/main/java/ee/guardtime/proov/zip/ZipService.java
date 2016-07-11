@@ -1,8 +1,9 @@
 package ee.guardtime.proov.zip;
 
-import org.apache.commons.io.IOUtils;
-
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -31,7 +32,7 @@ public class ZipService {
     while((entry = originInputStream.getNextEntry()) != null) {
       if(entriesToCopy.contains(entry.getName())){
         destinationOutputStream.putNextEntry(new ZipEntry(entry));
-        IOUtils.copy(originInputStream, destinationOutputStream);
+        copyLarge(originInputStream, destinationOutputStream, new byte[DEFAULT_BUFFER_SIZE]);
         destinationOutputStream.closeEntry();
       }
     }
@@ -114,6 +115,17 @@ public class ZipService {
     {
       if(output!=null) output.close();
     }
+  }
+
+
+  private static long copyLarge(InputStream input, OutputStream output, byte[] buffer) throws IOException {
+    long count;
+    int n;
+    for(count = 0L; -1 != (n = input.read(buffer)); count += (long)n) {
+      output.write(buffer, 0, n);
+    }
+
+    return count;
   }
 
 }
