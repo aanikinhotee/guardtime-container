@@ -26,7 +26,7 @@ import static org.junit.Assert.assertEquals;
  * Date: 7/10/16
  * Time: 12:15 AM
  */
-public class ZipContainerServiceImplTest2 extends GuardtimeTests {
+public class ZipContainerServiceImplTestModifications extends GuardtimeTests {
 
   HttpClientSettings httpClientSettings;
 
